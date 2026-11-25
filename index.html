@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEET (UG) 2027 — Digital CBT Mock Exam & Anti-Cheat System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      overflow-x: hidden;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .math-formula {
+      font-family: 'Cambria Math', 'Times New Roman', serif;
+      font-size: 1.04em;
+    }
+    /* Prevent text selection & dragging on locked exam surface */
+    .proctored-surface {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    /* NTA-style Question Palette Status Indicators */
+    .q-not-visited {
+      background-color: #e2e8f0;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+    }
+    .q-not-answered {
+      background-color: #dc2626;
+      color: #ffffff;
+      border: 1px solid #b91c1c;
+      border-radius: 6px 6px 16px 16px;
+    }
+    .q-answered {
+      background-color: #16a34a;
+      color: #ffffff;
+      border: 1px solid #15803d;
+      border-radius: 16px 16px 6px 6px;
+    }
+    .q-marked {
+      background-color: #7e22ce;
+      color: #ffffff;
+      border: 1px solid #6b21a8;
+      border-radius: 9999px;
+    }
+    .q-answered-marked {
+      background-color: #7e22ce;
+      color: #ffffff;
+      border: 2px solid #22c55e;
+      border-radius: 9999px;
+      position: relative;
+    }
+    .q-answered-marked::after {
+      content: "✓";
+      position: absolute;
+      bottom: -3px;
+      right: -3px;
+      width: 14px;
+      height: 14px;
+      background-color: #16a34a;
+      color: #ffffff;
+      border: 1px solid #ffffff;
+      border-radius: 9999px;
+      font-size: 9px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @keyframes urgentPulse {
+      0%, 100% { background-color: #991b1b; }
+      50% { background-color: #dc2626; }
+    }
+    .warning-bell-banner {
+      animation: urgentPulse 1.1s infinite;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background-color: #ffffff !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification Banner -->
+  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs sm:text-sm font-medium"></div>
+
+  <!-- Anti-Cheating Strike Warning Modal -->
+  <div id="violationModal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white border-2 border-red-600 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-center">
+      <div class="w-14 h-14 mx-auto rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl font-extrabold">
+        ⚠
+      </div>
+      <h2 class="text-xl font-extrabold text-red-700 uppercase tracking-wide mt-3">
+        Anti-Cheating Security Alert
+      </h2>
+      <p id="violationReasonText" class="text-sm text-slate-700 font-medium mt-2">
+        Exam proctoring violation detected.
+      </p>
+      <div class="mt-4 bg-red-50 border border-red-200 rounded-xl p-3.5">
+        <div class="text-[11px] font-extrabold uppercase text-red-600">Violation Strike Counter</div>
+        <div id="violationStrikeCounter" class="text-2xl font-extrabold font-mono-num text-red-700 mt-0.5">1 / 3</div>
+        <p class="text-xs text-red-600 mt-1">
+          Reaching the maximum strike limit automatically submits and locks your exam.
+        </p>
+      </div>
+      <button id="returnFullscreenBtn" class="mt-5 w-full py-3 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm shadow-lg transition cursor-pointer">
+        Resume Fullscreen Exam Immediately
+      </button>
+    </div>
+  </div>
+
+  <!-- Submit Confirmation Modal -->
+  <div id="submitModal" class="fixed inset-0 z-50 hidden bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200">
+      <h3 class="text-lg font-extrabold text-slate-900">Submit NEET (UG) 2027 Mock Exam?</h3>
+      <p class="text-xs sm:text-sm text-slate-600 mt-1">
+        After final submission, responses cannot be modified. You will receive a downloadable response sheet (.json) and verification code to send to your teacher.
+      </p>
+      <div id="submitSummaryContainer" class="mt-4 overflow-x-auto"></div>
+      <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
+        <button id="cancelSubmitModalBtn" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-100 cursor-pointer">
+          Back to Exam
+        </button>
+        <button id="confirmSubmitExamBtn" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow cursor-pointer">
+          Confirm &amp; Submit Exam
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 1: CANDIDATE START & SETUP SCREEN ==================== -->
+  <div id="startScreenView" class="flex-1 flex flex-col">
+    <header class="bg-[#0b2545] text-white border-b-4 border-amber-400 px-4 sm:px-8 py-4 shadow-md">
+      <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[11px] font-extrabold uppercase tracking-wider">
+              NEET UG 2027 CBT
+            </span>
+            <span class="text-xs text-sky-200 font-medium">
+              3 Separate Subject Sections • Laptop / Desktop Proctored Mode
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight mt-1">
+            NEET (UG) 2027 DIGITAL MOCK EXAMINATION PORTAL
+          </h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="setupTestBellBtn" class="px-3.5 py-2 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-300/40 text-amber-200 text-xs font-bold transition cursor-pointer">
+            🔔 Test 5-Min Bell
+          </button>
+          <button id="downloadStandaloneHtmlBtn" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition cursor-pointer">
+            ⬇ Save as index.html
+          </button>
+          <button id="openTeacherPortalBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-extrabold shadow transition cursor-pointer">
+            🔐 Teacher / Separate Answer Key Portal
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-7 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Candidate Registration & Paper Configuration -->
+      <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <h2 class="text-base sm:text-lg font-extrabold text-[#0b2545] border-b border-slate-200 pb-3">
+          1. Candidate Details &amp; Subject Section Selection
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label for="studentNameInput" class="block text-xs font-bold uppercase text-slate-600 mb-1">
+              Student Full Name *
+            </label>
+            <input id="studentNameInput" type="text" placeholder="Enter your full name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0b2545]" />
+          </div>
+          <div>
+            <label for="studentRollInput" class="block text-xs font-bold uppercase text-slate-600 mb-1">
+              Roll Number / Student ID *
+            </label>
+            <input id="studentRollInput" type="text" placeholder="e.g., 2027-BIO-042" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono-num focus:outline-none focus:ring-2 focus:ring-[#0b2545]" />
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-2">
+            2. Choose Exam Paper Format (3 Separate Subjects) *
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="paperModeSelector">
+            <label class="paper-option-card flex items-start gap-3 p-3.5 rounded-xl border-2 border-[#0b2545] bg-sky-50/70 cursor-pointer transition">
+              <input type="radio" name="paperMode" value="ALL" checked class="mt-1 accent-[#0b2545]" />
+              <div>
+                <div class="font-extrabold text-sm text-[#0b2545]">Full 3-Subject Mock Test</div>
+                <div class="text-xs text-slate-600 mt-0.5">Physics, Chemistry &amp; Biology tabs with independent palettes</div>
+              </div>
+            </label>
+            <label class="paper-option-card flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 cursor-pointer transition">
+              <input type="radio" name="paperMode" value="Physics" class="mt-1 accent-[#0b2545]" />
+              <div>
+                <div class="font-extrabold text-sm text-slate-900">Section 1: Physics Only</div>
+                <div class="text-xs text-slate-600 mt-0.5">Dedicated Physics digital option test (+4 / −1)</div>
+              </div>
+            </label>
+            <label class="paper-option-card flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 cursor-pointer transition">
+              <input type="radio" name="paperMode" value="Chemistry" class="mt-1 accent-[#0b2545]" />
+              <div>
+                <div class="font-extrabold text-sm text-slate-900">Section 2: Chemistry Only</div>
+                <div class="text-xs text-slate-600 mt-0.5">Dedicated Chemistry digital option test (+4 / −1)</div>
+              </div>
+            </label>
+            <label class="paper-option-card flex items-start gap-3 p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 cursor-pointer transition">
+              <input type="radio" name="paperMode" value="Biology" class="mt-1 accent-[#0b2545]" />
+              <div>
+                <div class="font-extrabold text-sm text-slate-900">Section 3: Biology Only</div>
+                <div class="text-xs text-slate-600 mt-0.5">Dedicated Biology digital option test (+4 / −1)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+          <div>
+            <label for="durationModeSelect" class="block text-xs font-bold uppercase text-slate-700 mb-1">
+              Timer Duration
+            </label>
+            <select id="durationModeSelect" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800">
+              <option value="standard">Standard (180m Full / 60m Single Subject)</option>
+              <option value="demo515">05:15 Quick Bell Demo (Bell rings in 15s)</option>
+            </select>
+          </div>
+          <div>
+            <label for="maxStrikesSelect" class="block text-xs font-bold uppercase text-slate-700 mb-1">
+              Anti-Cheat Strike Limit
+            </label>
+            <select id="maxStrikesSelect" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800">
+              <option value="3" selected>3 Strikes (Auto-Submit on 3rd Violation)</option>
+              <option value="2">2 Strikes (Strict Mode)</option>
+              <option value="5">5 Strikes (Lenient Practice)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-5 flex items-start gap-2.5">
+          <input id="candidateConsentCheckbox" type="checkbox" class="mt-1 w-4 h-4 accent-[#0b2545] cursor-pointer" />
+          <label for="candidateConsentCheckbox" class="text-xs text-slate-700 leading-relaxed cursor-pointer">
+            I agree to take this exam honestly in <strong>Fullscreen Mode</strong> on my laptop/desktop. I understand that switching tabs, losing window focus, exiting fullscreen, copying text, or opening developer tools triggers anti-cheating strikes, and that the answer key is kept separate for teacher grading.
+          </label>
+        </div>
+
+        <button id="startExamButton" class="mt-6 w-full py-3.5 px-6 rounded-xl bg-[#0b2545] hover:bg-slate-800 text-white font-extrabold text-sm sm:text-base shadow-lg transition cursor-pointer">
+          ▶ Start Exam &amp; Lock Fullscreen
+        </button>
+      </div>
+
+      <!-- Proctoring & Hosting Instructions -->
+      <div class="lg:col-span-5 flex flex-col gap-5">
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <h3 class="text-sm font-extrabold text-red-800 uppercase flex items-center gap-2">
+            <span>🛡️ Anti-Cheating &amp; Proctoring Rules</span>
+          </h3>
+          <ul class="mt-3 space-y-2 text-xs text-red-900 leading-relaxed list-disc pl-4">
+            <li><strong>Starts Only on Click:</strong> The countdown timer begins only after you enter your details and click <strong>Start Exam &amp; Lock Fullscreen</strong>.</li>
+            <li><strong>5-Minute Warning Bell:</strong> At <strong>05:00</strong> remaining, a multi-chime bell sounds and a red alert banner appears.</li>
+            <li><strong>Tab, Focus &amp; Fullscreen Lock:</strong> Switching tabs, minimizing, clicking outside the window, or pressing Esc to exit fullscreen logs a strike.</li>
+            <li><strong>Shortcut &amp; Copy Protection:</strong> Right-click, text selection, Ctrl+C/V/X/P/U, F12, and Ctrl+Shift+I/J/C are blocked.</li>
+            <li><strong>Shuffled Order &amp; Sealed Answers:</strong> Questions and options are randomized per student, and answers are never displayed on the student screen.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 class="text-sm font-extrabold text-[#0b2545]">🌐 GitHub Pages / Netlify Drop &amp; Grading</h3>
+          <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">
+            Save this file as <code class="font-mono-num font-bold bg-slate-100 px-1.5 py-0.5 rounded">index.html</code> and upload it to a GitHub repository (with GitHub Pages enabled) or drag it to Netlify Drop, then share the URL with your students.
+          </p>
+          <div class="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
+            <strong>Teacher Portal Default Passcode:</strong> <code class="font-mono-num font-bold bg-white px-1.5 py-0.5 rounded border border-emerald-300">NEET2027</code>
+            <p class="mt-1 text-[11px] text-emerald-800">
+              View/print the separate subject-wise answer key, grade student <code>.json</code> response sheets or verification codes, export CSV marksheets, and change the passcode anytime.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== VIEW 2: ACTIVE CBT EXAM WORKSPACE ==================== -->
+  <div id="examWorkspaceView" class="hidden flex-1 flex flex-col proctored-surface">
+    <!-- 5-Minute Warning Banner -->
+    <div id="fiveMinuteWarningBanner" class="hidden warning-bell-banner text-white px-4 py-2 text-center text-xs sm:text-sm font-extrabold tracking-wide shadow">
+      🔔 5-MINUTE WARNING BELL! Less than 5 minutes remaining — review and save your answers before auto-submission.
+    </div>
+
+    <!-- Top Exam Header -->
+    <header class="bg-[#0b2545] text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow">
+      <div class="flex items-center gap-2.5">
+        <span class="font-extrabold text-sm sm:text-base">NEET 2027 CBT</span>
+        <span id="activeStudentTag" class="text-xs bg-white/15 px-2.5 py-1 rounded-lg font-medium"></span>
+      </div>
+
+      <!-- 3 Separate Subject Section Tabs -->
+      <nav id="subjectSectionTabs" aria-label="Subject Sections" class="flex flex-wrap items-center gap-1.5 bg-slate-950/60 p-1 rounded-xl"></nav>
+
+      <!-- Strikes & Countdown Timer -->
+      <div class="flex items-center gap-3">
+        <div id="activeStrikeBadge" class="px-2.5 py-1 rounded-lg bg-emerald-900/70 border border-emerald-400/40 text-xs font-bold text-emerald-200">
+          Violations: <span id="activeStrikeCount" class="font-mono-num">0</span>/<span id="activeStrikeMax" class="font-mono-num">3</span>
+        </div>
+        <div class="bg-slate-950 border border-amber-400/60 px-3.5 py-1 rounded-xl flex items-center gap-2">
+          <span class="text-[11px] uppercase text-slate-400 font-bold">Timer</span>
+          <span id="countdownTimerText" class="font-mono-num text-base sm:text-lg font-extrabold text-amber-400">03:00:00</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main CBT Split Layout -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0">
+      <!-- Question & Digital Option Selection Area -->
+      <section class="lg:col-span-8 xl:col-span-9 bg-white border-r border-slate-200 p-4 sm:p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+            <div class="flex items-center gap-2">
+              <span id="questionSubjectChip" class="px-3 py-1 rounded-lg bg-sky-100 text-[#0b2545] text-xs font-extrabold uppercase">Physics</span>
+              <span id="questionIndexLabel" class="text-sm sm:text-base font-extrabold text-slate-900">Question 1</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-bold">
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">+4 Correct</span>
+              <span class="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200">−1 Wrong</span>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200">0 Blank</span>
+            </div>
+          </div>
+
+          <div id="questionTextContainer" class="mt-5 text-base sm:text-lg text-slate-900 font-medium leading-relaxed"></div>
+
+          <div id="digitalOptionsContainer" class="mt-6 space-y-3"></div>
+        </div>
+
+        <!-- NTA Action Bar -->
+        <div class="mt-8 pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="saveAndNextBtn" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer">
+              Save &amp; Next
+            </button>
+            <button id="clearOptionBtn" class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-bold transition cursor-pointer">
+              Clear Response
+            </button>
+            <button id="markForReviewBtn" class="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer">
+              Mark for Review &amp; Next
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="prevQuestionBtn" class="px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs sm:text-sm font-bold transition cursor-pointer">
+              ← Previous
+            </button>
+            <button id="openSubmitModalBtn" class="px-5 py-2.5 rounded-xl bg-[#0b2545] hover:bg-slate-800 text-amber-300 text-xs sm:text-sm font-extrabold shadow transition cursor-pointer">
+              Submit Exam
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Independent Subject Question Palette -->
+      <aside class="lg:col-span-4 xl:col-span-3 bg-slate-100 p-4 flex flex-col justify-between">
+        <div>
+          <div class="bg-white rounded-xl p-3 border border-slate-200 shadow-2xs">
+            <div class="text-xs font-extrabold uppercase text-slate-700 mb-2">Question Palette Summary</div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] font-semibold text-slate-700">
+              <div class="flex items-center gap-2">
+                <span id="countAnswered" class="w-6 h-6 flex items-center justify-center text-[10px] font-bold q-answered">0</span>
+                <span>Answered</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="countNotAnswered" class="w-6 h-6 flex items-center justify-center text-[10px] font-bold q-not-answered">0</span>
+                <span>Not Answered</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="countNotVisited" class="w-6 h-6 flex items-center justify-center text-[10px] font-bold q-not-visited">0</span>
+                <span>Not Visited</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="countMarked" class="w-6 h-6 flex items-center justify-center text-[10px] font-bold q-marked">0</span>
+                <span>Marked Review</span>
+              </div>
+              <div class="col-span-2 flex items-center gap-2">
+                <span id="countAnsweredMarked" class="w-6 h-6 flex items-center justify-center text-[10px] font-bold q-answered-marked">0</span>
+                <span>Answered &amp; Marked for Review</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-between">
+            <span id="paletteSectionHeading" class="text-xs font-extrabold uppercase text-[#0b2545]">Physics Palette</span>
+            <span id="paletteQuestionTotal" class="text-xs font-bold text-slate-500"></span>
+          </div>
+
+          <div id="questionPaletteGrid" class="mt-2.5 grid grid-cols-5 gap-2 max-h-[360px] overflow-y-auto p-1"></div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-200 text-[11px] text-slate-500">
+          Fullscreen &amp; Tab-Lock Proctoring Active
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 3: STUDENT RESPONSE RECEIPT (NO ANSWERS) ==================== -->
+  <div id="studentReceiptView" class="hidden flex-1 bg-slate-100 py-8 px-4">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <div id="receiptTopBanner" class="bg-[#0b2545] text-white p-6">
+        <div class="text-xs uppercase font-bold tracking-wider text-amber-300">
+          Official Digital CBT Response Receipt
+        </div>
+        <h2 class="text-2xl font-extrabold mt-1">
+          NEET (UG) 2027 — Exam Submitted Successfully
+        </h2>
+        <p class="text-xs text-slate-200 mt-1">
+          Correct answers are kept separate in the Teacher Portal and are not shown to students.
+        </p>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div id="receiptLockNotice" class="hidden bg-red-50 border-2 border-red-600 rounded-xl p-4 text-red-800 text-xs sm:text-sm font-bold">
+          ⚠ EXAM AUTO-SUBMITTED &amp; LOCKED DUE TO REACHING THE ANTI-CHEATING VIOLATION STRIKE LIMIT.
+        </div>
+
+        <div id="receiptDetailsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm bg-slate-50 p-4 rounded-xl border border-slate-200"></div>
+
+        <div>
+          <h3 class="text-sm font-extrabold text-slate-800 mb-2">Subject-Wise Attempt Summary</h3>
+          <div id="receiptSubjectSummaryTable" class="overflow-x-auto"></div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div class="text-xs font-extrabold uppercase text-amber-950">
+            Send Response Sheet (.json) or Verification Code to Your Teacher
+          </div>
+          <p class="text-xs text-amber-800 mt-1">
+            Download your response file or copy the code below and share it with your teacher for official grading.
+          </p>
+          <textarea id="studentVerificationCodeBox" readonly rows="3" class="mt-2.5 w-full p-2.5 rounded-lg bg-white border border-amber-300 font-mono-num text-xs text-slate-800"></textarea>
+          <div class="mt-3 flex flex-wrap gap-2.5">
+            <button id="downloadStudentJsonBtn" class="px-4 py-2.5 rounded-xl bg-[#0b2545] hover:bg-slate-800 text-white text-xs font-bold shadow cursor-pointer">
+              ⬇ Download Student Response Sheet (.json)
+            </button>
+            <button id="copyVerificationCodeBtn" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold cursor-pointer">
+              📋 Copy Verification Code
+            </button>
+            <button onclick="window.print()" class="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer">
+              🖨 Print Receipt
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between">
+          <button id="returnStartScreenBtn" class="text-xs font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer">
+            ← Return to Exam Portal Home
+          </button>
+          <span class="text-xs text-slate-400">Sealed Evaluation Mode</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW 4: TEACHER PORTAL (SEPARATE ANSWER KEY & AUTO-GRADER) ==================== -->
+  <div id="teacherPortalModal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm overflow-y-auto p-4">
+    <div class="max-w-6xl mx-auto my-6 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-[#0b2545] text-white px-6 py-4 flex items-center justify-between gap-3">
+        <div>
+          <span class="text-xs font-bold uppercase text-amber-300">Educator / Evaluator Access</span>
+          <h2 class="text-lg sm:text-xl font-extrabold">
+            Separate Subject Answer Key &amp; Student Auto-Grader
+          </h2>
+        </div>
+        <button id="closeTeacherPortalBtn" class="px-3.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold cursor-pointer">
+          ✕ Close
+        </button>
+      </div>
+
+      <!-- Passcode Gate -->
+      <div id="teacherPasscodeScreen" class="p-8 max-w-md mx-auto text-center">
+        <div class="text-3xl mb-2">🔐</div>
+        <h3 class="text-lg font-extrabold text-slate-900">Teacher Passcode Required</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          Default passcode: <code class="font-mono-num font-bold bg-slate-100 px-1.5 py-0.5 rounded">NEET2027</code>
+        </p>
+        <input id="teacherPasscodeField" type="password" placeholder="Enter teacher passcode" class="mt-4 w-full px-4 py-2.5 rounded-xl border border-slate-300 text-center font-mono-num text-sm focus:outline-none focus:ring-2 focus:ring-[#0b2545]" />
+        <button id="unlockTeacherBtn" class="mt-4 w-full py-2.5 px-5 rounded-xl bg-[#0b2545] hover:bg-slate-800 text-white font-bold text-sm cursor-pointer">
+          Unlock Teacher Portal
+        </button>
+      </div>
+
+      <!-- Unlocked Teacher Workspace -->
+      <div id="teacherAuthenticatedPanel" class="hidden p-6 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 no-print">
+          <div class="flex flex-wrap gap-2">
+            <button data-tab="keyTabPanel" class="teacher-nav-btn px-4 py-2 rounded-xl bg-[#0b2545] text-white text-xs font-bold cursor-pointer">
+              1. Separate Answer Key (3 Subjects)
+            </button>
+            <button data-tab="graderTabPanel" class="teacher-nav-btn px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer">
+              2. Grade Student Responses &amp; Logs
+            </button>
+            <button data-tab="settingsTabPanel" class="teacher-nav-btn px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer">
+              3. Passcode, Bell Test &amp; Hosting Help
+            </button>
+          </div>
+          <button id="exportGradedCsvBtn" class="hidden px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">
+            📊 Export Graded Batch (.csv)
+          </button>
+        </div>
+
+        <!-- Panel 1: Separate Subject-Wise Answer Key -->
+        <div id="keyTabPanel" class="teacher-panel space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 no-print">
+            <div class="flex items-center gap-2">
+              <label for="answerKeySubjectSelect" class="text-xs font-bold text-slate-700">Subject Answer Sheet:</label>
+              <select id="answerKeySubjectSelect" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold">
+                <option value="ALL">All 3 Subjects (Physics, Chemistry, Biology)</option>
+                <option value="Physics">Physics Answer Key</option>
+                <option value="Chemistry">Chemistry Answer Key</option>
+                <option value="Biology">Biology Answer Key</option>
+              </select>
+            </div>
+            <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-[#0b2545] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">
+              🖨 Print Separate Answer Key
+            </button>
+          </div>
+          <div id="separateAnswerKeyList" class="space-y-6 max-h-[60vh] overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Panel 2: Auto-Grader & Anti-Cheat Log Viewer -->
+        <div id="graderTabPanel" class="teacher-panel hidden space-y-4">
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <label class="block text-xs font-extrabold uppercase text-slate-700">
+              Upload Student Response Sheet (.json) or Paste Verification Code
+            </label>
+            <div class="flex flex-col sm:flex-row gap-3 mt-2.5">
+              <input id="uploadStudentJsonInput" type="file" accept=".json" multiple class="text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-[#0b2545] file:text-white file:font-bold cursor-pointer" />
+              <button id="runAutoGraderBtn" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">
+                Grade Submission(s)
+              </button>
+            </div>
+            <textarea id="pasteStudentCodeArea" rows="3" placeholder="Paste NEET27-... code here..." class="mt-3 w-full p-2.5 rounded-lg border border-slate-300 font-mono-num text-xs"></textarea>
+          </div>
+
+          <div id="gradedResultsContainer" class="space-y-4"></div>
+        </div>
+
+        <!-- Panel 3: Passcode, Bell Test & Hosting Guide -->
+        <div id="settingsTabPanel" class="teacher-panel hidden space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <h4 class="text-sm font-extrabold text-slate-900">Update Teacher Portal Passcode</h4>
+              <p class="text-xs text-slate-500 mt-1">Change the passcode for this browser session before sharing or grading.</p>
+              <div class="flex gap-2 mt-3">
+                <input id="newTeacherPasscodeInput" type="text" placeholder="New passcode" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 font-mono-num text-xs" />
+                <button id="saveNewPasscodeBtn" class="px-4 py-2 rounded-lg bg-[#0b2545] text-white text-xs font-bold cursor-pointer">
+                  Update
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <h4 class="text-sm font-extrabold text-slate-900">5-Minute Warning Bell Audio Test</h4>
+              <p class="text-xs text-slate-500 mt-1">Verify laptop speaker volume for the 05:00 warning chime.</p>
+              <button id="teacherTestBellBtn" class="mt-3 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold cursor-pointer">
+                🔔 Play 5-Minute Warning Bell
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 text-xs text-slate-800 space-y-1.5">
+            <h4 class="text-sm font-extrabold text-[#0b2545]">How to Publish to GitHub Pages or Netlify Drop</h4>
+            <p>1. Click <strong>Save as index.html</strong> in the top bar (or save this file directly as <code>index.html</code>).</p>
+            <p>2. Upload <code>index.html</code> to a new public GitHub repository and enable <strong>Settings → Pages → Branch: main / root</strong>, or drag it onto <strong>Netlify Drop</strong>.</p>
+            <p>3. Send the live URL to your students. After they finish, collect their downloaded <code>.json</code> response files and grade them in Tab 2 above.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CORE APPLICATION SCRIPT ==================== -->
+  <script>
+    (function () {
+      "use strict";
+
+      // ---------------------------------------------------------------------
+      // 1. NEET UG 2027 QUESTION BANK (PHYSICS, CHEMISTRY, BIOLOGY)
+      // ---------------------------------------------------------------------
+      const QUESTION_BANK = [
+        // PHYSICS
+        {
+          id: "P01",
+          subject: "Physics",
+          question: "A solid conducting sphere having charge <span class='math-formula'>Q</span> is surrounded by an uncharged conducting hollow spherical shell. If the potential difference between the inner sphere surface and outer shell surface is <span class='math-formula'>V</span>, what is the new potential difference between the same two surfaces when the outer shell is given a charge of <span class='math-formula'>−4Q</span>?",
+          options: ["V", "2V", "4V", "−2V"],
+          correctIndex: 0,
+          solution: "Adding charge to the outer spherical shell shifts potentials of both surfaces equally, keeping the potential difference equal to V."
+        },
+        {
+          id: "P02",
+          subject: "Physics",
+          question: "A prism of refractive index <span class='math-formula'>μ</span> and refracting angle <span class='math-formula'>A</span> is set at minimum deviation. If the angle of minimum deviation equals <span class='math-formula'>A</span>, then <span class='math-formula'>A</span> in terms of <span class='math-formula'>μ</span> is:",
+          options: ["sin⁻¹(μ / 2)", "2 cos⁻¹(μ / 2)", "cos⁻¹(μ / 2)", "2 sin⁻¹(μ / 2)"],
+          correctIndex: 1,
+          solution: "At δ_m = A, μ = sin(A) / sin(A/2) = 2 cos(A/2), giving A = 2 cos⁻¹(μ/2)."
+        },
+        {
+          id: "P03",
+          subject: "Physics",
+          question: "In a series LCR AC circuit, removing <span class='math-formula'>L</span> gives a phase difference of <span class='math-formula'>π/3</span> between current and voltage, and removing <span class='math-formula'>C</span> also gives <span class='math-formula'>π/3</span>. What is the power factor of the full LCR circuit?",
+          options: ["0.5", "1.0", "−1.0", "0.866"],
+          correctIndex: 1,
+          solution: "X_C/R = X_L/R = tan(π/3), so X_L = X_C (resonance). Thus Z = R and power factor cos φ = R/Z = 1.0."
+        },
+        {
+          id: "P04",
+          subject: "Physics",
+          question: "An air-filled parallel plate capacitor has capacitance <span class='math-formula'>6 μF</span>. When a dielectric slab is inserted, capacitance becomes <span class='math-formula'>30 μF</span>. Given <span class='math-formula'>ε₀ = 8.875 × 10⁻¹² C²N⁻¹m⁻²</span>, the permittivity of the medium is:",
+          options: [
+            "1.77 × 10⁻¹² C²N⁻¹m⁻²",
+            "0.44 × 10⁻¹⁰ C²N⁻¹m⁻²",
+            "5.00 C²N⁻¹m⁻²",
+            "0.44 × 10⁻¹³ C²N⁻¹m⁻²"
+          ],
+          correctIndex: 1,
+          solution: "Dielectric constant K = 30/6 = 5. Permittivity ε = 5 × 8.875 × 10⁻¹² ≈ 0.44 × 10⁻¹⁰ C²N⁻¹m⁻²."
+        },
+        {
+          id: "P05",
+          subject: "Physics",
+          question: "An iron rod of magnetic susceptibility <span class='math-formula'>599</span> is placed in a magnetizing field of <span class='math-formula'>1200 A m⁻¹</span>. Taking <span class='math-formula'>μ₀ = 4π × 10⁻⁷ TmA⁻¹</span>, the permeability of the rod is:",
+          options: [
+            "8.0 × 10⁻⁵ TmA⁻¹",
+            "2.4π × 10⁻⁵ TmA⁻¹",
+            "2.4π × 10⁻⁷ TmA⁻¹",
+            "2.4π × 10⁻⁴ TmA⁻¹"
+          ],
+          correctIndex: 3,
+          solution: "μ = μ₀(1 + χ) = 4π × 10⁻⁷ × 600 = 2.4π × 10⁻⁴ TmA⁻¹."
+        },
+        {
+          id: "P06",
+          subject: "Physics",
+          question: "A full-wave rectifier operates from a <span class='math-formula'>50 Hz</span> AC mains supply. What is the fundamental frequency of the ripple in its output?",
+          options: ["25 Hz", "50 Hz", "70.7 Hz", "100 Hz"],
+          correctIndex: 3,
+          solution: "A full-wave rectifier produces two output pulses per AC cycle, doubling the frequency to 100 Hz."
+        },
+        {
+          id: "P07",
+          subject: "Physics",
+          question: "An ideal step-down transformer connected to <span class='math-formula'>220 V</span> AC mains supplies an <span class='math-formula'>11 V, 44 W</span> lamp. The current drawn in the primary circuit is:",
+          options: ["0.2 A", "0.4 A", "2.0 A", "4.0 A"],
+          correctIndex: 0,
+          solution: "Primary power = Secondary power = 44 W ⇒ I_p = 44 / 220 = 0.2 A."
+        },
+        {
+          id: "P08",
+          subject: "Physics",
+          question: "A solid cylinder and a thin hollow cylindrical shell have equal mass and radius and roll without slipping with the same angular speed. The ratio of their total kinetic energies (solid to shell) is:",
+          options: ["1 : 2", "3 : 4", "2 : 3", "4 : 3"],
+          correctIndex: 1,
+          solution: "KE_solid = (3/4)mv² and KE_shell = mv², giving a ratio of 3 : 4."
+        },
+        {
+          id: "P09",
+          subject: "Physics",
+          question: "For a cell of emf <span class='math-formula'>E</span> and internal resistance <span class='math-formula'>r</span>, plotting terminal voltage <span class='math-formula'>V</span> against current <span class='math-formula'>I</span> gives a straight line. Its slope and <span class='math-formula'>V</span>-intercept are respectively:",
+          options: ["−r and E", "r and −E", "−E and r", "E and −r"],
+          correctIndex: 0,
+          solution: "From V = E − Ir, the slope is −r and the intercept on the V-axis is E."
+        },
+        {
+          id: "P10",
+          subject: "Physics",
+          question: "A photon of energy <span class='math-formula'>4 eV</span> strikes a photosensitive surface of work function <span class='math-formula'>2 eV</span>. The stopping potential is:",
+          options: ["2 V", "4 V", "6 V", "2√2 V"],
+          correctIndex: 0,
+          solution: "eV₀ = hν − φ₀ = 4 eV − 2 eV = 2 eV ⇒ V₀ = 2 V."
+        },
+        {
+          id: "P11",
+          subject: "Physics",
+          question: "If <span class='math-formula'>v<sub>e</sub></span> is escape velocity and <span class='math-formula'>v<sub>o</sub></span> is orbital speed just above Earth's surface, their relation is:",
+          options: ["v_o = √2 v_e", "v_o = v_e", "v_e = √2 v_o", "v_e = v_o / 2"],
+          correctIndex: 2,
+          solution: "v_e = √(2gR) and v_o = √(gR), so v_e = √2 v_o."
+        },
+        {
+          id: "P12",
+          subject: "Physics",
+          question: "An artificial satellite in a circular orbit around Earth has total mechanical energy <span class='math-formula'>E₀</span>. Its potential energy and kinetic energy respectively are:",
+          options: ["2E₀ and −2E₀", "2E₀ and −E₀", "−2E₀ and −E₀", "−2E₀ and E₀"],
+          correctIndex: 1,
+          solution: "For a satellite in circular orbit, Kinetic Energy = −E₀ and Potential Energy = 2E₀."
+        },
+
+        // CHEMISTRY
+        {
+          id: "C01",
+          subject: "Chemistry",
+          question: "Why does <span class='math-formula'>2s − 2p<sub>y</sub></span> overlap along the <span class='math-formula'>z</span>-internuclear axis produce zero net bonding interaction?",
+          options: [
+            "Their energy gap is too large for overlap",
+            "They have mismatched symmetries along the z-axis",
+            "The 2p_y orbital has zero electron density",
+            "Both orbitals are always completely filled"
+          ],
+          correctIndex: 1,
+          solution: "Positive and negative overlap regions cancel out along the z-axis due to symmetry difference."
+        },
+        {
+          id: "C02",
+          subject: "Chemistry",
+          question: "Among these meta-directing groups in electrophilic aromatic substitution, which one is most deactivating?",
+          options: ["−C≡N", "−SO₃H", "−COOH", "−NO₂"],
+          correctIndex: 3,
+          solution: "−NO₂ is strongly deactivating due to powerful −I and −R electron withdrawal."
+        },
+        {
+          id: "C03",
+          subject: "Chemistry",
+          question: "For sucrose hydrolysis with equilibrium constant <span class='math-formula'>K<sub>c</sub> = 2 × 10¹³</span> at <span class='math-formula'>300 K</span>, the standard Gibbs free energy change <span class='math-formula'>Δ<sub>r</sub>G<sup>⊖</sup></span> equals:",
+          options: [
+            "8.314 Jmol⁻¹K⁻¹ × 300 K × ln(2 × 10¹³)",
+            "8.314 Jmol⁻¹K⁻¹ × 300 K × ln(3 × 10¹³)",
+            "−8.314 Jmol⁻¹K⁻¹ × 300 K × ln(4 × 10¹³)",
+            "−8.314 Jmol⁻¹K⁻¹ × 300 K × ln(2 × 10¹³)"
+          ],
+          correctIndex: 3,
+          solution: "Δ_rG° = −RT ln K_c = −8.314 × 300 × ln(2 × 10¹³)."
+        },
+        {
+          id: "C04",
+          subject: "Chemistry",
+          question: "In <span class='math-formula'>BrO₃⁻ + 5Br⁻ + 6H⁺ → 3Br₂ + 3H₂O</span>, the rate of formation of <span class='math-formula'>Br₂</span> relative to disappearance of <span class='math-formula'>Br⁻</span> is:",
+          options: [
+            "d[Br₂]/dt = −(5/3) d[Br⁻]/dt",
+            "d[Br₂]/dt = (5/3) d[Br⁻]/dt",
+            "d[Br₂]/dt = (3/5) d[Br⁻]/dt",
+            "d[Br₂]/dt = −(3/5) d[Br⁻]/dt"
+          ],
+          correctIndex: 3,
+          solution: "−(1/5) d[Br⁻]/dt = +(1/3) d[Br₂]/dt ⇒ d[Br₂]/dt = −(3/5) d[Br⁻]/dt."
+        },
+        {
+          id: "C05",
+          subject: "Chemistry",
+          question: "How much silver (<span class='math-formula'>Ag = 108</span>) is deposited by the quantity of electricity that liberates <span class='math-formula'>5600 mL</span> of <span class='math-formula'>O₂</span> at STP?",
+          options: ["5.4 g", "10.8 g", "54.0 g", "108.0 g"],
+          correctIndex: 3,
+          solution: "5600 mL O₂ at STP = 0.25 mol = 1 equivalent (n = 4), which deposits 1 equivalent of Ag = 108.0 g."
+        },
+        {
+          id: "C06",
+          subject: "Chemistry",
+          question: "If <span class='math-formula'>N₂(g) + O₂(g) ⇌ 2NO(g)</span> has equilibrium constant <span class='math-formula'>K</span>, then for <span class='math-formula'>½N₂(g) + ½O₂(g) ⇌ NO(g)</span> the equilibrium constant is:",
+          options: ["K / 2", "K^(1/2)", "K²", "2K"],
+          correctIndex: 1,
+          solution: "Halving the reaction coefficients takes the square root of K: K^(1/2)."
+        },
+        {
+          id: "C07",
+          subject: "Chemistry",
+          question: "A compound contains <span class='math-formula'>32%</span> element <span class='math-formula'>A</span> (at. wt. 64), <span class='math-formula'>20%</span> element <span class='math-formula'>B</span> (at. wt. 40), and the rest element <span class='math-formula'>C</span> (at. wt. 32). Its empirical formula is:",
+          options: ["A₂BC₂", "ABC₃", "AB₂C₂", "ABC₄"],
+          correctIndex: 1,
+          solution: "Moles: A = 32/64 = 0.5, B = 20/40 = 0.5, C = 48/32 = 1.5 ⇒ ratio 1 : 1 : 3 = ABC₃."
+        },
+        {
+          id: "C08",
+          subject: "Chemistry",
+          question: "An element with atomic number <span class='math-formula'>35</span> belongs to which group of the periodic table?",
+          options: ["Group 15", "Group 16", "Group 17", "Group 18"],
+          correctIndex: 2,
+          solution: "Atomic number 35 is Bromine (Br), a Group 17 halogen."
+        },
+        {
+          id: "C09",
+          subject: "Chemistry",
+          question: "Which process has a negative entropy change (<span class='math-formula'>ΔS &lt; 0</span>)?",
+          options: [
+            "2H(g) → H₂(g)",
+            "Evaporation of water",
+            "Isothermal gas expansion",
+            "Sublimation of camphor"
+          ],
+          correctIndex: 0,
+          solution: "Association of two gas atoms into one gas molecule reduces molecular disorder (ΔS < 0)."
+        },
+        {
+          id: "C10",
+          subject: "Chemistry",
+          question: "Which compound does NOT readily undergo Friedel-Crafts reaction?",
+          options: ["Cumene", "Xylene", "Nitrobenzene", "Toluene"],
+          correctIndex: 2,
+          solution: "Nitrobenzene has a strongly deactivating −NO₂ group and complexes with AlCl₃."
+        },
+        {
+          id: "C11",
+          subject: "Chemistry",
+          question: "How many Faradays of charge are required to reduce <span class='math-formula'>1 mole</span> of <span class='math-formula'>Cr₂O₇²⁻</span> to <span class='math-formula'>Cr³⁺</span>?",
+          options: ["3 F", "6 F", "1 F", "2 F"],
+          correctIndex: 1,
+          solution: "Cr(+6) to Cr(+3) per atom × 2 Cr atoms = 6 electrons = 6 Faradays."
+        },
+        {
+          id: "C12",
+          subject: "Chemistry",
+          question: "When <span class='math-formula'>E°<sub>cell</sub></span> is negative for a reaction, which pair of conditions for <span class='math-formula'>ΔG°</span> and <span class='math-formula'>K<sub>eq</sub></span> is correct?",
+          options: [
+            "ΔG° > 0 and K_eq < 1",
+            "ΔG° > 0 and K_eq > 1",
+            "ΔG° < 0 and K_eq > 1",
+            "ΔG° < 0 and K_eq < 1"
+          ],
+          correctIndex: 0,
+          solution: "ΔG° = −nFE°_cell > 0 when E°_cell < 0, which means K_eq < 1."
+        },
+
+        // BIOLOGY
+        {
+          id: "B01",
+          subject: "Biology",
+          question: "If a double-stranded DNA molecule contains <span class='math-formula'>30%</span> Adenine, what is the percentage of Guanine?",
+          options: ["30%", "20%", "40%", "60%"],
+          correctIndex: 1,
+          solution: "A = T = 30% (60% total), leaving 40% for G + C ⇒ Guanine = 20%."
+        },
+        {
+          id: "B02",
+          subject: "Biology",
+          question: "Superiority of an <span class='math-formula'>F₁</span> hybrid over both inbred parents when crossing unrelated lines is termed:",
+          options: ["Transformation", "Splicing", "Metamorphosis", "Heterosis"],
+          correctIndex: 3,
+          solution: "Heterosis (hybrid vigour) describes increased vigour/performance in F₁ hybrids."
+        },
+        {
+          id: "B03",
+          subject: "Biology",
+          question: "Which hormone is secreted in greater proportion by the adrenal medulla?",
+          options: ["Norepinephrine", "Epinephrine", "Cortisol", "Aldosterone"],
+          correctIndex: 1,
+          solution: "Epinephrine (adrenaline) makes up roughly 80% of adrenal medullary secretion."
+        },
+        {
+          id: "B04",
+          subject: "Biology",
+          question: "Specialized phagocytic cells located in the liver sinusoids are:",
+          options: ["Kupffer's cells", "Schwann cells", "Paneth cells", "Argentaffin cells"],
+          correctIndex: 0,
+          solution: "Kupffer's cells are hepatic macrophages that clear debris and microbes."
+        },
+        {
+          id: "B05",
+          subject: "Biology",
+          question: "Consider muscle myofibril statements: (A) Z-line bisects the light (I) band. (B) Thin filaments attach directly to the M-line. (C) Central non-overlapped thick filament region is called Z-band. (D) Light band contains only thin filaments. Which are correct?",
+          options: ["A and D", "B and C", "A and C", "B and D"],
+          correctIndex: 0,
+          solution: "The I-band has only actin (thin) filaments with the Z-line in its center."
+        },
+        {
+          id: "B06",
+          subject: "Biology",
+          question: "Which part of the human fallopian tube is the widest and longest segment?",
+          options: ["Isthmus", "Infundibulum", "Ampulla", "Fimbriae"],
+          correctIndex: 2,
+          solution: "The ampulla is the widest and longest portion of the oviduct."
+        },
+        {
+          id: "B07",
+          subject: "Biology",
+          question: "Light-dependent respiratory pathway starting in chloroplasts of C₃ plants without ATP gain is:",
+          options: ["Aerobic respiration", "Anaerobic respiration", "Fermentation", "Photorespiration"],
+          correctIndex: 3,
+          solution: "Photorespiration occurs in light when RuBisCO oxygenates RuBP."
+        },
+        {
+          id: "B08",
+          subject: "Biology",
+          question: "Which feature of a transcription unit defines the template and coding strands?",
+          options: ["Terminator", "Promoter", "Operator", "Intron"],
+          correctIndex: 1,
+          solution: "The promoter sets transcription direction and identifies template vs. coding strands."
+        },
+        {
+          id: "B09",
+          subject: "Biology",
+          question: "Which statement about restriction endonucleases is INCORRECT?",
+          options: [
+            "Recognizes a specific palindromic DNA sequence",
+            "Cuts DNA at a specific site within the sequence",
+            "Cuts only one strand of the DNA double helix",
+            "Cleaves the sugar-phosphate backbone on each strand"
+          ],
+          correctIndex: 2,
+          solution: "Restriction endonucleases cut both strands of double-stranded DNA."
+        },
+        {
+          id: "B10",
+          subject: "Biology",
+          question: "Which chlorophyll pigments are present in Rhodophyceae (red algae)?",
+          options: ["Chlorophyll a, b", "Chlorophyll a, c", "Chlorophyll a, d", "Chlorophyll b, c"],
+          correctIndex: 2,
+          solution: "Red algae contain chlorophyll a and chlorophyll d along with r-phycoerythrin."
+        },
+        {
+          id: "B11",
+          subject: "Biology",
+          question: "Which pair of urinary findings is characteristic of Diabetes Mellitus?",
+          options: [
+            "Uremia and Renal Calculi",
+            "Ketonuria and Glycosuria",
+            "Renal Calculi and Hyperglycemia",
+            "Uremia and Ketonuria"
+          ],
+          correctIndex: 1,
+          solution: "Glucose (glycosuria) and ketone bodies (ketonuria) in urine indicate Diabetes Mellitus."
+        },
+        {
+          id: "B12",
+          subject: "Biology",
+          question: "During which stage of Prophase I do chromosomes appear thin and thread-like?",
+          options: ["Leptotene", "Zygotene", "Pachytene", "Diplotene"],
+          correctIndex: 0,
+          solution: "Leptotene is marked by thin, elongated thread-like chromosomes becoming visible."
+        }
+      ];
+
+      // ---------------------------------------------------------------------
+      // 2. APPLICATION STATE & BELL AUDIO
+      // ---------------------------------------------------------------------
+      let teacherPasscode = "NEET2027";
+      let gradedBatchList = [];
+      let audioContextInstance = null;
+
+      const examState = {
+        studentName: "",
+        studentRoll: "",
+        paperMode: "ALL",
+        durationMode: "standard",
+        maxStrikes: 3,
+        isRunning: false,
+        isSubmitted: false,
+        autoLockedByCheat: false,
+        totalSeconds: 10800,
+        remainingSeconds: 10800,
+        fiveMinBellTriggered: false,
+        timerId: null,
+        strikes: 0,
+        violationHistory: [],
+        lastStrikeTimestamp: 0,
+        activeSubjects: [],
+        currentSubject: "Physics",
+        questionsBySubject: {},
+        indexBySubject: {},
+        answersByQid: {}
+      };
+
+      function ensureAudioContext() {
+        if (!audioContextInstance) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) audioContextInstance = new AudioCtx();
+        }
+        if (audioContextInstance && audioContextInstance.state === "suspended") {
+          audioContextInstance.resume().catch(() => {});
+        }
+        return audioContextInstance;
+      }
+
+      // Play audible 5-minute warning bell chimes via Web Audio API
+      function playFiveMinuteBell() {
+        try {
+          const ctx = ensureAudioContext();
+          if (!ctx) return;
+          const t0 = ctx.currentTime;
+          [0, 0.65, 1.3].forEach((delay) => {
+            const oscFundamental = ctx.createOscillator();
+            const oscHarmonic = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscFundamental.type = "sine";
+            oscFundamental.frequency.setValueAtTime(880, t0 + delay);
+            oscHarmonic.type = "triangle";
+            oscHarmonic.frequency.setValueAtTime(1320, t0 + delay);
+
+            gainNode.gain.setValueAtTime(0.001, t0 + delay);
+            gainNode.gain.exponentialRampToValueAtTime(0.35, t0 + delay + 0.025);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 0.56);
+
+            oscFundamental.connect(gainNode);
+            oscHarmonic.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscFundamental.start(t0 + delay);
+            oscHarmonic.start(t0 + delay);
+            oscFundamental.stop(t0 + delay + 0.58);
+            oscHarmonic.stop(t0 + delay + 0.58);
+          });
+        } catch (err) {
+          // Ignore audio restrictions if browser blocks unprompted sound
+        }
+      }
+
+      function playStrikeAlertTone() {
+        try {
+          const ctx = ensureAudioContext();
+          if (!ctx) return;
+          const t0 = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(440, t0);
+          osc.frequency.linearRampToValueAtTime(240, t0 + 0.35);
+          gain.gain.setValueAtTime(0.25, t0);
+          gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.36);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + 0.38);
+        } catch (err) {}
+      }
+
+      // ---------------------------------------------------------------------
+      // 3. HELPERS (SHUFFLE, FORMAT, ENCODE/DECODE)
+      // ---------------------------------------------------------------------
+      function showNotification(msg) {
+        const toast = document.getElementById("toastBanner");
+        toast.textContent = msg;
+        toast.classList.remove("hidden");
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.add("hidden"), 3400);
+      }
+
+      function shuffleList(items) {
+        const arr = items.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function formatClock(sec) {
+        const safe = Math.max(0, sec);
+        const h = Math.floor(safe / 3600);
+        const m = Math.floor((safe % 3600) / 60);
+        const s = safe % 60;
+        return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+      }
+
+      function encodeReceipt(payloadObj) {
+        const utf8 = new TextEncoder().encode(JSON.stringify(payloadObj));
+        let binary = "";
+        utf8.forEach((b) => {
+          binary += String.fromCharCode(b);
+        });
+        return "NEET2027-RPT-" + btoa(binary);
+      }
+
+      function decodeReceipt(inputStr) {
+        const trimmed = inputStr.trim();
+        if (trimmed.startsWith("{")) {
+          const parsed = JSON.parse(trimmed);
+          return parsed.receipt ? parsed.receipt : parsed;
+        }
+        if (!trimmed.startsWith("NEET2027-RPT-")) {
+          throw new Error("Invalid verification code format.");
+        }
+        const b64 = trimmed.slice("NEET2027-RPT-".length);
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const decoded = JSON.parse(new TextDecoder().decode(bytes));
+        return decoded.receipt ? decoded.receipt : decoded;
+      }
+
+      // ---------------------------------------------------------------------
+      // 4. EXAM SESSION SETUP & SHUFFLING
+      // ---------------------------------------------------------------------
+      function buildExamSession() {
+        const subjects =
+          examState.paperMode === "ALL"
+            ? ["Physics", "Chemistry", "Biology"]
+            : [examState.paperMode];
+
+        examState.activeSubjects = subjects;
+        examState.currentSubject = subjects[0];
+        examState.questionsBySubject = {};
+        examState.indexBySubject = {};
+        examState.answersByQid = {};
+
+        subjects.forEach((subj) => {
+          const pool = QUESTION_BANK.filter((q) => q.subject === subj);
+          const shuffledQs = shuffleList(pool).map((q) => {
+            const optionsWithOrigIdx = q.options.map((text, origIdx) => ({ text, origIdx }));
+            return {
+              id: q.id,
+              subject: q.subject,
+              question: q.question,
+              options: shuffleList(optionsWithOrigIdx)
+            };
+          });
+
+          examState.questionsBySubject[subj] = shuffledQs;
+          examState.indexBySubject[subj] = 0;
+
+          shuffledQs.forEach((q) => {
+            examState.answersByQid[q.id] = {
+              selectedPos: null,
+              selectedOrigIdx: null,
+              status: "not-visited"
+            };
+          });
+        });
+
+        const firstQ = examState.questionsBySubject[examState.currentSubject][0];
+        if (firstQ) {
+          examState.answersByQid[firstQ.id].status = "not-answered";
+        }
+
+        if (examState.durationMode === "demo515") {
+          examState.totalSeconds = 315; // 5m 15s (bell rings in 15s)
+        } else {
+          examState.totalSeconds = examState.paperMode === "ALL" ? 180 * 60 : 60 * 60;
+        }
+
+        examState.remainingSeconds = examState.totalSeconds;
+        examState.fiveMinBellTriggered = false;
+        examState.strikes = 0;
+        examState.violationHistory = [];
+        examState.lastStrikeTimestamp = 0;
+        examState.isRunning = true;
+        examState.isSubmitted = false;
+        examState.autoLockedByCheat = false;
+      }
+
+      // ---------------------------------------------------------------------
+      // 5. FULLSCREEN & ANTI-CHEATING PROCTORING ENGINE
+      // ---------------------------------------------------------------------
+      function enterFullscreenLock() {
+        const root = document.documentElement;
+        if (root.requestFullscreen) {
+          root.requestFullscreen().catch(() => {});
+        } else if (root.webkitRequestFullscreen) {
+          root.webkitRequestFullscreen();
+        }
+      }
+
+      function triggerAntiCheatStrike(reason) {
+        if (!examState.isRunning || examState.isSubmitted) return;
+        const now = Date.now();
+        if (now - examState.lastStrikeTimestamp < 1200) return;
+        examState.lastStrikeTimestamp = now;
+
+        examState.strikes += 1;
+        examState.violationHistory.push({
+          strike: examState.strikes,
+          reason,
+          timestamp: new Date().toLocaleTimeString(),
+          timeRemaining: formatClock(examState.remainingSeconds)
+        });
+
+        playStrikeAlertTone();
+        document.getElementById("activeStrikeCount").textContent = examState.strikes;
+        document.getElementById("activeStrikeBadge").className =
+          "px-2.5 py-1 rounded-lg bg-red-700 border border-red-400 text-xs font-extrabold text-white";
+
+        if (examState.strikes >= examState.maxStrikes) {
+          document.getElementById("violationModal").classList.add("hidden");
+          completeExamSubmission(true, `Auto-Submitted (${examState.strikes}/${examState.maxStrikes} Violations)`);
+          return;
+        }
+
+        document.getElementById("violationReasonText").textContent = reason;
+        document.getElementById("violationStrikeCounter").textContent = `${examState.strikes} / ${examState.maxStrikes}`;
+        document.getElementById("violationModal").classList.remove("hidden");
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && examState.isRunning && !examState.isSubmitted) {
+          triggerAntiCheatStrike("Tab switch or window minimization detected.");
+        }
+      });
+
+      window.addEventListener("blur", () => {
+        if (examState.isRunning && !examState.isSubmitted) {
+          triggerAntiCheatStrike("Exam window lost focus (clicked outside or switched app).");
+        }
+      });
+
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement && examState.isRunning && !examState.isSubmitted) {
+          triggerAntiCheatStrike("Exited mandatory fullscreen mode.");
+        }
+      });
+
+      document.addEventListener("contextmenu", (e) => {
+        if (examState.isRunning && !examState.isSubmitted) {
+          e.preventDefault();
+          showNotification("Right-click context menu is disabled during the exam.");
+        }
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (!examState.isRunning || examState.isSubmitted) return;
+        const k = e.key.toLowerCase();
+        const ctrlBlock = (e.ctrlKey || e.metaKey) && ["c", "v", "x", "p", "u", "s", "a"].includes(k);
+        const devToolsBlock =
+          e.key === "F12" ||
+          ((e.ctrlKey || e.metaKey) && e.shiftKey && ["i", "j", "c"].includes(k));
+
+        if (ctrlBlock || devToolsBlock) {
+          e.preventDefault();
+          triggerAntiCheatStrike(`Blocked restricted shortcut or DevTools key (${e.key.toUpperCase()}).`);
+        }
+      });
+
+      document.getElementById("returnFullscreenBtn").addEventListener("click", () => {
+        document.getElementById("violationModal").classList.add("hidden");
+        enterFullscreenLock();
+      });
+
+      // ---------------------------------------------------------------------
+      // 6. COUNTDOWN TIMER & 5-MINUTE WARNING BELL
+      // ---------------------------------------------------------------------
+      function launchCountdownTimer() {
+        const timerEl = document.getElementById("countdownTimerText");
+        const bellBanner = document.getElementById("fiveMinuteWarningBanner");
+        timerEl.textContent = formatClock(examState.remainingSeconds);
+
+        clearInterval(examState.timerId);
+        examState.timerId = setInterval(() => {
+          if (!examState.isRunning || examState.isSubmitted) {
+            clearInterval(examState.timerId);
+            return;
+          }
+
+          examState.remainingSeconds -= 1;
+          timerEl.textContent = formatClock(examState.remainingSeconds);
+
+          // 5-Minute (300s) Warning Bell
+          if (examState.remainingSeconds <= 300 && !examState.fiveMinBellTriggered) {
+            examState.fiveMinBellTriggered = true;
+            playFiveMinuteBell();
+            bellBanner.classList.remove("hidden");
+            timerEl.classList.remove("text-amber-400");
+            timerEl.classList.add("text-red-400");
+          }
+
+          if (examState.remainingSeconds <= 0) {
+            clearInterval(examState.timerId);
+            completeExamSubmission(false, "Time Expired — Auto-Submitted");
+          }
+        }, 1000);
+      }
+
+      // ---------------------------------------------------------------------
+      // 7. RENDERING CBT QUESTION, OPTIONS & SUBJECT PALETTE
+      // ---------------------------------------------------------------------
+      function renderSubjectTabs() {
+        const nav = document.getElementById("subjectSectionTabs");
+        nav.innerHTML = "";
+        examState.activeSubjects.forEach((subj) => {
+          const active = subj === examState.currentSubject;
+          const btn = document.createElement("button");
+          btn.className = active
+            ? "px-3.5 py-1.5 rounded-lg bg-amber-400 text-slate-950 text-xs font-extrabold shadow cursor-pointer"
+            : "px-3.5 py-1.5 rounded-lg text-slate-200 hover:bg-white/10 text-xs font-bold transition cursor-pointer";
+          btn.textContent = `${subj} (${examState.questionsBySubject[subj].length})`;
+          btn.addEventListener("click", () => {
+            examState.currentSubject = subj;
+            const idx = examState.indexBySubject[subj] || 0;
+            const q = examState.questionsBySubject[subj][idx];
+            if (q && examState.answersByQid[q.id].status === "not-visited") {
+              examState.answersByQid[q.id].status = "not-answered";
+            }
+            renderCurrentQuestionView();
+          });
+          nav.appendChild(btn);
+        });
+      }
+
+      function renderCurrentQuestionView() {
+        renderSubjectTabs();
+
+        const subj = examState.currentSubject;
+        const qList = examState.questionsBySubject[subj];
+        const idx = examState.indexBySubject[subj];
+        const qObj = qList[idx];
+        const ansObj = examState.answersByQid[qObj.id];
+
+        if (ansObj.status === "not-visited") {
+          ansObj.status = "not-answered";
+        }
+
+        document.getElementById("questionSubjectChip").textContent = `Subject: ${subj}`;
+        document.getElementById("questionIndexLabel").textContent = `Question ${idx + 1} of ${qList.length}`;
+        document.getElementById("questionTextContainer").innerHTML = qObj.question;
+
+        const optionsBox = document.getElementById("digitalOptionsContainer");
+        optionsBox.innerHTML = "";
+
+        qObj.options.forEach((opt, pos) => {
+          const picked = ansObj.selectedPos === pos;
+          const label = document.createElement("label");
+          label.className = picked
+            ? "flex items-center gap-3.5 p-3.5 rounded-xl border-2 border-[#0b2545] bg-sky-50 cursor-pointer transition shadow-2xs"
+            : "flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white cursor-pointer transition";
+
+          label.innerHTML = `
+            <input type="radio" name="selectedChoice" value="${pos}" ${picked ? "checked" : ""} class="w-4 h-4 accent-[#0b2545]" />
+            <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold ${
+              picked ? "bg-[#0b2545] text-white" : "bg-slate-100 text-slate-700"
+            }">${pos + 1}</span>
+            <span class="text-sm sm:text-base text-slate-900 font-medium">${opt.text}</span>
+          `;
+
+          label.addEventListener("click", () => {
+            ansObj.selectedPos = pos;
+            ansObj.selectedOrigIdx = opt.origIdx;
+            renderCurrentQuestionView();
+          });
+
+          optionsBox.appendChild(label);
+        });
+
+        renderPaletteGrid();
+      }
+
+      function renderPaletteGrid() {
+        const subj = examState.currentSubject;
+        const qList = examState.questionsBySubject[subj];
+        const activeIdx = examState.indexBySubject[subj];
+
+        document.getElementById("paletteSectionHeading").textContent = `${subj} Palette`;
+        document.getElementById("paletteQuestionTotal").textContent = `${qList.length} Qs`;
+
+        const statusCounts = {
+          answered: 0,
+          "not-answered": 0,
+          "not-visited": 0,
+          marked: 0,
+          "answered-marked": 0
+        };
+
+        Object.values(examState.answersByQid).forEach((entry) => {
+          if (statusCounts[entry.status] !== undefined) {
+            statusCounts[entry.status] += 1;
+          }
+        });
+
+        document.getElementById("countAnswered").textContent = statusCounts.answered;
+        document.getElementById("countNotAnswered").textContent = statusCounts["not-answered"];
+        document.getElementById("countNotVisited").textContent = statusCounts["not-visited"];
+        document.getElementById("countMarked").textContent = statusCounts.marked;
+        document.getElementById("countAnsweredMarked").textContent = statusCounts["answered-marked"];
+
+        const grid = document.getElementById("questionPaletteGrid");
+        grid.innerHTML = "";
+
+        qList.forEach((q, idx) => {
+          const st = examState.answersByQid[q.id].status;
+          const btn = document.createElement("button");
+          btn.className = `h-10 w-full text-xs font-extrabold flex items-center justify-center cursor-pointer transition q-${st} ${
+            idx === activeIdx ? "ring-2 ring-offset-2 ring-[#0b2545]" : ""
+          }`;
+          btn.textContent = idx + 1;
+          btn.addEventListener("click", () => {
+            examState.indexBySubject[subj] = idx;
+            if (examState.answersByQid[q.id].status === "not-visited") {
+              examState.answersByQid[q.id].status = "not-answered";
+            }
+            renderCurrentQuestionView();
+          });
+          grid.appendChild(btn);
+        });
+      }
+
+      function goToNextQuestionOrSection() {
+        const subj = examState.currentSubject;
+        const qList = examState.questionsBySubject[subj];
+        const idx = examState.indexBySubject[subj];
+
+        if (idx + 1 < qList.length) {
+          examState.indexBySubject[subj] = idx + 1;
+          renderCurrentQuestionView();
+        } else {
+          const sPos = examState.activeSubjects.indexOf(subj);
+          if (sPos + 1 < examState.activeSubjects.length) {
+            const nextSubj = examState.activeSubjects[sPos + 1];
+            examState.currentSubject = nextSubj;
+            const firstNextQ = examState.questionsBySubject[nextSubj][0];
+            if (firstNextQ && examState.answersByQid[firstNextQ.id].status === "not-visited") {
+              examState.answersByQid[firstNextQ.id].status = "not-answered";
+            }
+            renderCurrentQuestionView();
+            showNotification(`Switched to ${nextSubj} section.`);
+          } else {
+            renderCurrentQuestionView();
+            showNotification("You are at the last question.");
+          }
+        }
+      }
+
+      document.getElementById("saveAndNextBtn").addEventListener("click", () => {
+        const subj = examState.currentSubject;
+        const q = examState.questionsBySubject[subj][examState.indexBySubject[subj]];
+        const ans = examState.answersByQid[q.id];
+        if (ans.selectedPos !== null) {
+          ans.status = "answered";
+        } else {
+          ans.status = "not-answered";
+          showNotification("No option chosen — marked as Not Answered.");
+        }
+        goToNextQuestionOrSection();
+      });
+
+      document.getElementById("clearOptionBtn").addEventListener("click", () => {
+        const subj = examState.currentSubject;
+        const q = examState.questionsBySubject[subj][examState.indexBySubject[subj]];
+        const ans = examState.answersByQid[q.id];
+        ans.selectedPos = null;
+        ans.selectedOrigIdx = null;
+        ans.status = "not-answered";
+        renderCurrentQuestionView();
+      });
+
+      document.getElementById("markForReviewBtn").addEventListener("click", () => {
+        const subj = examState.currentSubject;
+        const q = examState.questionsBySubject[subj][examState.indexBySubject[subj]];
+        const ans = examState.answersByQid[q.id];
+        ans.status = ans.selectedPos !== null ? "answered-marked" : "marked";
+        goToNextQuestionOrSection();
+      });
+
+      document.getElementById("prevQuestionBtn").addEventListener("click", () => {
+        const subj = examState.currentSubject;
+        const idx = examState.indexBySubject[subj];
+        if (idx > 0) {
+          examState.indexBySubject[subj] = idx - 1;
+          renderCurrentQuestionView();
+        }
+      });
+
+      // ---------------------------------------------------------------------
+      // 8. SUBMISSION & SEALED RECEIPT (NO ANSWER KEY SHOWN TO STUDENTS)
+      // ---------------------------------------------------------------------
+      document.getElementById("openSubmitModalBtn").addEventListener("click", () => {
+        let html = `
+          <table class="w-full text-xs border-collapse border border-slate-200">
+            <thead>
+              <tr class="bg-slate-100">
+                <th class="border border-slate-200 p-2 text-left">Subject</th>
+                <th class="border border-slate-200 p-2 text-center">Total</th>
+                <th class="border border-slate-200 p-2 text-center text-emerald-700">Answered</th>
+                <th class="border border-slate-200 p-2 text-center text-purple-700">Review</th>
+                <th class="border border-slate-200 p-2 text-center text-red-600">Unanswered</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        examState.activeSubjects.forEach((subj) => {
+          const qs = examState.questionsBySubject[subj];
+          let ans = 0, rev = 0, unans = 0;
+          qs.forEach((q) => {
+            const st = examState.answersByQid[q.id].status;
+            if (st === "answered" || st === "answered-marked") ans++;
+            else if (st === "marked") rev++;
+            else unans++;
+          });
+          html += `
+            <tr>
+              <td class="border border-slate-200 p-2 font-bold">${subj}</td>
+              <td class="border border-slate-200 p-2 text-center">${qs.length}</td>
+              <td class="border border-slate-200 p-2 text-center font-bold text-emerald-700">${ans}</td>
+              <td class="border border-slate-200 p-2 text-center font-bold text-purple-700">${rev}</td>
+              <td class="border border-slate-200 p-2 text-center font-bold text-red-600">${unans}</td>
+            </tr>
+          `;
+        });
+
+        html += "</tbody></table>";
+        document.getElementById("submitSummaryContainer").innerHTML = html;
+        document.getElementById("submitModal").classList.remove("hidden");
+      });
+
+      document.getElementById("cancelSubmitModalBtn").addEventListener("click", () => {
+        document.getElementById("submitModal").classList.add("hidden");
+      });
+
+      document.getElementById("confirmSubmitExamBtn").addEventListener("click", () => {
+        document.getElementById("submitModal").classList.add("hidden");
+        completeExamSubmission(false, "Submitted by Candidate");
+      });
+
+      function completeExamSubmission(lockedByCheat, statusText) {
+        if (examState.isSubmitted) return;
+        examState.isSubmitted = true;
+        examState.isRunning = false;
+        examState.autoLockedByCheat = lockedByCheat;
+        clearInterval(examState.timerId);
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        document.getElementById("examWorkspaceView").classList.add("hidden");
+        document.getElementById("studentReceiptView").classList.remove("hidden");
+
+        document.getElementById("receiptLockNotice").classList.toggle("hidden", !lockedByCheat);
+        const banner = document.getElementById("receiptTopBanner");
+        banner.classList.toggle("bg-red-800", lockedByCheat);
+        banner.classList.toggle("bg-[#0b2545]", !lockedByCheat);
+
+        const elapsedSec = examState.totalSeconds - Math.max(0, examState.remainingSeconds);
+
+        document.getElementById("receiptDetailsGrid").innerHTML = `
+          <div><span class="text-xs text-slate-500 block">Student Name</span><strong>${examState.studentName}</strong></div>
+          <div><span class="text-xs text-slate-500 block">Roll Number / ID</span><strong class="font-mono-num">${examState.studentRoll}</strong></div>
+          <div><span class="text-xs text-slate-500 block">Paper Mode</span><strong>${examState.paperMode === "ALL" ? "Full 3-Subject Mock" : examState.paperMode + " Only"}</strong></div>
+          <div><span class="text-xs text-slate-500 block">Time Used</span><strong class="font-mono-num">${formatClock(elapsedSec)}</strong></div>
+          <div><span class="text-xs text-slate-500 block">Status</span><strong class="${lockedByCheat ? "text-red-700" : "text-emerald-700"}">${statusText}</strong></div>
+          <div><span class="text-xs text-slate-500 block">Anti-Cheat Violations</span><strong class="font-mono-num ${examState.strikes > 0 ? "text-red-600" : "text-emerald-700"}">${examState.strikes} / ${examState.maxStrikes}</strong></div>
+        `;
+
+        let summaryTbl = `
+          <table class="w-full text-xs border-collapse border border-slate-200">
+            <thead>
+              <tr class="bg-slate-100">
+                <th class="border border-slate-200 p-2 text-left">Subject</th>
+                <th class="border border-slate-200 p-2 text-center">Total Questions</th>
+                <th class="border border-slate-200 p-2 text-center">Attempted</th>
+                <th class="border border-slate-200 p-2 text-center">Unattempted</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        const recordedAnswers = {};
+        examState.activeSubjects.forEach((subj) => {
+          const qs = examState.questionsBySubject[subj];
+          let attempted = 0;
+          qs.forEach((q) => {
+            const r = examState.answersByQid[q.id];
+            const counted = (r.status === "answered" || r.status === "answered-marked") && r.selectedOrigIdx !== null;
+            if (counted) attempted++;
+            recordedAnswers[q.id] = counted ? r.selectedOrigIdx : null;
+          });
+          summaryTbl += `
+            <tr>
+              <td class="border border-slate-200 p-2 font-bold">${subj}</td>
+              <td class="border border-slate-200 p-2 text-center">${qs.length}</td>
+              <td class="border border-slate-200 p-2 text-center font-bold text-emerald-700">${attempted}</td>
+              <td class="border border-slate-200 p-2 text-center">${qs.length - attempted}</td>
+            </tr>
+          `;
+        });
+        summaryTbl += "</tbody></table>";
+        document.getElementById("receiptSubjectSummaryTable").innerHTML = summaryTbl;
+
+        const receiptObj = {
+          exam: "NEET-UG-2027",
+          studentName: examState.studentName,
+          studentRoll: examState.studentRoll,
+          paperMode: examState.paperMode,
+          submittedAt: new Date().toISOString(),
+          timeUsedSeconds: elapsedSec,
+          autoLockedByCheat: lockedByCheat,
+          statusText,
+          strikes: examState.strikes,
+          maxStrikes: examState.maxStrikes,
+          violationHistory: examState.violationHistory,
+          answers: recordedAnswers
+        };
+
+        const code = encodeReceipt(receiptObj);
+        document.getElementById("studentVerificationCodeBox").value = code;
+        window.__latestReceiptObj = receiptObj;
+        window.__latestReceiptCode = code;
+      }
+
+      document.getElementById("downloadStudentJsonBtn").addEventListener("click", () => {
+        if (!window.__latestReceiptObj) return;
+        const jsonContent = JSON.stringify(
+          {
+            verificationCode: window.__latestReceiptCode,
+            receipt: window.__latestReceiptObj
+          },
+          null,
+          2
+        );
+        const blob = new Blob([jsonContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `NEET2027_${examState.studentRoll.replace(/[^a-zA-Z0-9_-]/g, "_")}_Response.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById("copyVerificationCodeBtn").addEventListener("click", () => {
+        const box = document.getElementById("studentVerificationCodeBox");
+        box.select();
+        document.execCommand("copy");
+        showNotification("Verification code copied to clipboard.");
+      });
+
+      document.getElementById("returnStartScreenBtn").addEventListener("click", () => {
+        document.getElementById("studentReceiptView").classList.add("hidden");
+        document.getElementById("startScreenView").classList.remove("hidden");
+      });
+
+      // ---------------------------------------------------------------------
+      // 9. START SCREEN EVENTS & STANDALONE INDEX.HTML DOWNLOAD HELPER
+      // ---------------------------------------------------------------------
+      document.querySelectorAll('input[name="paperMode"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          document.querySelectorAll(".paper-option-card").forEach((card) => {
+            card.classList.remove("border-[#0b2545]", "bg-sky-50/70");
+            card.classList.add("border-slate-200");
+          });
+          const activeCard = e.target.closest(".paper-option-card");
+          activeCard.classList.remove("border-slate-200");
+          activeCard.classList.add("border-[#0b2545]", "bg-sky-50/70");
+        });
+      });
+
+      document.getElementById("setupTestBellBtn").addEventListener("click", () => {
+        ensureAudioContext();
+        playFiveMinuteBell();
+        showNotification("Playing 5-minute warning bell chime...");
+      });
+
+      document.getElementById("downloadStandaloneHtmlBtn").addEventListener("click", () => {
+        const fullHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "index.html";
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification("Saved standalone index.html for GitHub Pages / Netlify Drop.");
+      });
+
+      document.getElementById("startExamButton").addEventListener("click", () => {
+        const name = document.getElementById("studentNameInput").value.trim();
+        const roll = document.getElementById("studentRollInput").value.trim();
+        const agreed = document.getElementById("candidateConsentCheckbox").checked;
+
+        if (!name || !roll) {
+          showNotification("Please enter both Student Name and Roll Number.");
+          return;
+        }
+        if (!agreed) {
+          showNotification("Please check the proctoring & fullscreen consent box first.");
+          return;
+        }
+
+        examState.studentName = name;
+        examState.studentRoll = roll;
+        examState.paperMode = document.querySelector('input[name="paperMode"]:checked').value;
+        examState.durationMode = document.getElementById("durationModeSelect").value;
+        examState.maxStrikes = parseInt(document.getElementById("maxStrikesSelect").value, 10) || 3;
+
+        ensureAudioContext();
+        buildExamSession();
+        enterFullscreenLock();
+
+        history.pushState(null, "", location.href);
+        window.onpopstate = function () {
+          if (examState.isRunning && !examState.isSubmitted) {
+            history.pushState(null, "", location.href);
+            triggerAntiCheatStrike("Browser back button pressed during exam.");
+          }
+        };
+
+        document.getElementById("activeStudentTag").textContent = `${examState.studentName} (${examState.studentRoll})`;
+        document.getElementById("activeStrikeCount").textContent = "0";
+        document.getElementById("activeStrikeMax").textContent = examState.maxStrikes;
+        document.getElementById("activeStrikeBadge").className =
+          "px-2.5 py-1 rounded-lg bg-emerald-900/70 border border-emerald-400/40 text-xs font-bold text-emerald-200";
+        document.getElementById("fiveMinuteWarningBanner").classList.add("hidden");
+        document.getElementById("countdownTimerText").classList.remove("text-red-400");
+        document.getElementById("countdownTimerText").classList.add("text-amber-400");
+
+        document.getElementById("startScreenView").classList.add("hidden");
+        document.getElementById("examWorkspaceView").classList.remove("hidden");
+
+        renderCurrentQuestionView();
+        launchCountdownTimer();
+      });
+
+      // ---------------------------------------------------------------------
+      // 10. TEACHER PORTAL (SEPARATE ANSWER KEY, AUTO-GRADER, CSV EXPORT)
+      // ---------------------------------------------------------------------
+      document.getElementById("openTeacherPortalBtn").addEventListener("click", () => {
+        document.getElementById("teacherPortalModal").classList.remove("hidden");
+      });
+
+      document.getElementById("closeTeacherPortalBtn").addEventListener("click", () => {
+        document.getElementById("teacherPortalModal").classList.add("hidden");
+      });
+
+      document.getElementById("unlockTeacherBtn").addEventListener("click", () => {
+        const entered = document.getElementById("teacherPasscodeField").value.trim();
+        if (entered === teacherPasscode) {
+          document.getElementById("teacherPasscodeScreen").classList.add("hidden");
+          document.getElementById("teacherAuthenticatedPanel").classList.remove("hidden");
+          renderSeparateAnswerKey();
+        } else {
+          showNotification("Invalid teacher passcode.");
+        }
+      });
+
+      document.querySelectorAll(".teacher-nav-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".teacher-nav-btn").forEach((b) => {
+            b.className = "teacher-nav-btn px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer";
+          });
+          btn.className = "teacher-nav-btn px-4 py-2 rounded-xl bg-[#0b2545] text-white text-xs font-bold cursor-pointer";
+          const targetId = btn.getAttribute("data-tab");
+          document.querySelectorAll(".teacher-panel").forEach((panel) => {
+            panel.classList.toggle("hidden", panel.id !== targetId);
+          });
+        });
+      });
+
+      document.getElementById("answerKeySubjectSelect").addEventListener("change", renderSeparateAnswerKey);
+
+      function renderSeparateAnswerKey() {
+        const selected = document.getElementById("answerKeySubjectSelect").value;
+        const subjects = selected === "ALL" ? ["Physics", "Chemistry", "Biology"] : [selected];
+        const listEl = document.getElementById("separateAnswerKeyList");
+        listEl.innerHTML = "";
+
+        subjects.forEach((subj) => {
+          const qs = QUESTION_BANK.filter((q) => q.subject === subj);
+          const card = document.createElement("div");
+          card.className = "border border-slate-200 rounded-xl overflow-hidden";
+
+          const rows = qs
+            .map(
+              (q, idx) => `
+              <tr class="border-t border-slate-200">
+                <td class="p-2.5 font-mono-num font-bold text-center text-slate-700">Q${idx + 1} (${q.id})</td>
+                <td class="p-2.5 text-slate-800">${q.question}</td>
+                <td class="p-2.5 font-bold text-emerald-700 bg-emerald-50/60">(${q.correctIndex + 1}) ${q.options[q.correctIndex]}</td>
+                <td class="p-2.5 text-slate-600">${q.solution}</td>
+              </tr>`
+            )
+            .join("");
+
+          card.innerHTML = `
+            <div class="bg-[#0b2545] text-white px-4 py-2 text-xs font-extrabold uppercase tracking-wide">
+              Separate Answer Key — ${subj} (${qs.length} Questions)
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-700">
+                    <th class="p-2.5 text-center w-24">Question</th>
+                    <th class="p-2.5">Prompt</th>
+                    <th class="p-2.5 w-48">Correct Option</th>
+                    <th class="p-2.5 w-64">Solution Note</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          `;
+          listEl.appendChild(card);
+        });
+      }
+
+      function scoreSingleReceipt(receipt) {
+        const ansMap = receipt.answers || {};
+        let score = 0, maxScore = 0, correct = 0, wrong = 0, unattempted = 0;
+        const perSubject = {
+          Physics: { c: 0, w: 0, u: 0, pts: 0 },
+          Chemistry: { c: 0, w: 0, u: 0, pts: 0 },
+          Biology: { c: 0, w: 0, u: 0, pts: 0 }
+        };
+
+        QUESTION_BANK.forEach((q) => {
+          if (!Object.prototype.hasOwnProperty.call(ansMap, q.id)) return;
+          maxScore += 4;
+          const choice = ansMap[q.id];
+          if (choice === null || choice === undefined) {
+            unattempted++;
+            perSubject[q.subject].u++;
+          } else if (choice === q.correctIndex) {
+            correct++;
+            score += 4;
+            perSubject[q.subject].c++;
+            perSubject[q.subject].pts += 4;
+          } else {
+            wrong++;
+            score -= 1;
+            perSubject[q.subject].w++;
+            perSubject[q.subject].pts -= 1;
+          }
+        });
+
+        const attemptedTotal = correct + wrong;
+        const accuracy = attemptedTotal > 0 ? ((correct / attemptedTotal) * 100).toFixed(1) : "0.0";
+
+        return {
+          studentName: receipt.studentName || "Unknown",
+          studentRoll: receipt.studentRoll || "N/A",
+          paperMode: receipt.paperMode || "ALL",
+          timeUsedSeconds: receipt.timeUsedSeconds || 0,
+          autoLockedByCheat: Boolean(receipt.autoLockedByCheat),
+          strikes: receipt.strikes || 0,
+          maxStrikes: receipt.maxStrikes || 3,
+          violationHistory: receipt.violationHistory || [],
+          score,
+          maxScore,
+          correct,
+          wrong,
+          unattempted,
+          accuracy,
+          perSubject
+        };
+      }
+
+      function renderGradedCards() {
+        const container = document.getElementById("gradedResultsContainer");
+        const exportBtn = document.getElementById("exportGradedCsvBtn");
+        exportBtn.classList.toggle("hidden", gradedBatchList.length === 0);
+
+        container.innerHTML = gradedBatchList
+          .map(
+            (g) => `
+            <div class="border-2 ${g.autoLockedByCheat ? "border-red-600 bg-red-50/40" : "border-emerald-600 bg-emerald-50/20"} rounded-2xl p-5 space-y-4">
+              <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-200 pb-3">
+                <div>
+                  <h4 class="text-base font-extrabold text-slate-900">${g.studentName} (${g.studentRoll})</h4>
+                  <p class="text-xs text-slate-600">Mode: ${g.paperMode} • Time Used: ${formatClock(g.timeUsedSeconds)} • Accuracy: ${g.accuracy}%</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-[11px] uppercase font-bold text-slate-500">NEET Score (+4 / −1)</div>
+                  <div class="text-2xl font-extrabold font-mono-num text-[#0b2545]">${g.score} / ${g.maxScore}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+                <div class="bg-white p-3 rounded-xl border border-slate-200"><span class="text-slate-500 block">Correct (+4)</span><strong class="text-lg font-mono-num text-emerald-700">${g.correct}</strong></div>
+                <div class="bg-white p-3 rounded-xl border border-slate-200"><span class="text-slate-500 block">Incorrect (−1)</span><strong class="text-lg font-mono-num text-red-600">${g.wrong}</strong></div>
+                <div class="bg-white p-3 rounded-xl border border-slate-200"><span class="text-slate-500 block">Unattempted (0)</span><strong class="text-lg font-mono-num text-slate-700">${g.unattempted}</strong></div>
+                <div class="bg-white p-3 rounded-xl border border-slate-200"><span class="text-slate-500 block">Violations</span><strong class="text-lg font-mono-num ${g.strikes > 0 ? "text-red-600" : "text-emerald-700"}">${g.strikes}/${g.maxStrikes}</strong></div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs bg-white border-collapse border border-slate-200">
+                  <thead>
+                    <tr class="bg-slate-100">
+                      <th class="border border-slate-200 p-2 text-left">Subject Section</th>
+                      <th class="border border-slate-200 p-2 text-center">Correct</th>
+                      <th class="border border-slate-200 p-2 text-center">Incorrect</th>
+                      <th class="border border-slate-200 p-2 text-center">Unattempted</th>
+                      <th class="border border-slate-200 p-2 text-center">Subject Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${Object.entries(g.perSubject)
+                      .filter(([, v]) => v.c + v.w + v.u > 0)
+                      .map(
+                        ([sName, v]) => `
+                        <tr>
+                          <td class="border border-slate-200 p-2 font-bold">${sName}</td>
+                          <td class="border border-slate-200 p-2 text-center text-emerald-700 font-bold">${v.c}</td>
+                          <td class="border border-slate-200 p-2 text-center text-red-600 font-bold">${v.w}</td>
+                          <td class="border border-slate-200 p-2 text-center">${v.u}</td>
+                          <td class="border border-slate-200 p-2 text-center font-extrabold font-mono-num">${v.pts}</td>
+                        </tr>`
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+
+              ${
+                g.violationHistory.length
+                  ? `<div class="bg-red-100 border border-red-300 rounded-xl p-3 text-xs text-red-900">
+                      <strong>Anti-Cheat Violation Log:</strong>
+                      <ul class="list-disc pl-4 mt-1">
+                        ${g.violationHistory
+                          .map((v) => `<li>Strike ${v.strike} at ${v.timestamp} (${v.timeRemaining} remaining): ${v.reason}</li>`)
+                          .join("")}
+                      </ul>
+                    </div>`
+                  : `<div class="text-xs font-bold text-emerald-700">✓ Clean Proctoring Log: Zero violations recorded.</div>`
+              }
+            </div>`
+          )
+          .join("");
+      }
+
+      document.getElementById("runAutoGraderBtn").addEventListener("click", async () => {
+        const files = Array.from(document.getElementById("uploadStudentJsonInput").files || []);
+        const pasted = document.getElementById("pasteStudentCodeArea").value.trim();
+
+        const rawInputs = [];
+        for (const file of files) {
+          const text = await file.text();
+          rawInputs.push(text);
+        }
+        if (pasted) {
+          pasted
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .forEach((line) => rawInputs.push(line));
+        }
+
+        if (!rawInputs.length) {
+          showNotification("Upload a .json response sheet or paste a verification code first.");
+          return;
+        }
+
+        let addedCount = 0;
+        rawInputs.forEach((raw) => {
+          try {
+            const receipt = decodeReceipt(raw);
+            gradedBatchList.unshift(scoreSingleReceipt(receipt));
+            addedCount++;
+          } catch (err) {
+            showNotification("Could not decode one of the entries.");
+          }
+        });
+
+        if (addedCount > 0) {
+          renderGradedCards();
+          showNotification(`Graded ${addedCount} student submission(s).`);
+        }
+      });
+
+      document.getElementById("exportGradedCsvBtn").addEventListener("click", () => {
+        if (!gradedBatchList.length) return;
+        const headers = [
+          "Student Name",
+          "Roll Number",
+          "Paper Mode",
+          "Score",
+          "Max Score",
+          "Accuracy %",
+          "Correct",
+          "Incorrect",
+          "Unattempted",
+          "Violations",
+          "Auto Locked"
+        ];
+        const rows = gradedBatchList.map((g) => [
+          `"${g.studentName.replace(/"/g, '""')}"`,
+          `"${g.studentRoll.replace(/"/g, '""')}"`,
+          g.paperMode,
+          g.score,
+          g.maxScore,
+          g.accuracy,
+          g.correct,
+          g.wrong,
+          g.unattempted,
+          `${g.strikes}/${g.maxStrikes}`,
+          g.autoLockedByCheat ? "Yes" : "No"
+        ]);
+        const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "NEET_2027_Graded_Results.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById("saveNewPasscodeBtn").addEventListener("click", () => {
+        const nextCode = document.getElementById("newTeacherPasscodeInput").value.trim();
+        if (!nextCode) {
+          showNotification("Enter a non-empty passcode.");
+          return;
+        }
+        teacherPasscode = nextCode;
+        document.getElementById("newTeacherPasscodeInput").value = "";
+        showNotification("Teacher passcode updated for this session.");
+      });
+
+      document.getElementById("teacherTestBellBtn").addEventListener("click", () => {
+        ensureAudioContext();
+        playFiveMinuteBell();
+        showNotification("Playing 5-minute warning bell chime...");
+      });
+    })();
+  </script>
+</body>
+</html>
